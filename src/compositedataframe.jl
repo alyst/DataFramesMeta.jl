@@ -2,22 +2,64 @@ using Compat
 
 export AbstractCompositeDataFrame, CompositeDataFrame
 
+"""
+    AbstractCompositeDataFrame
+    
+An abstract type that is an AbstractDataFrame. Each type that inherits from
+this is expected to be a type-stable data frame. 
+"""
 abstract AbstractCompositeDataFrame <: AbstractDataFrame
 
+"""
+```julia
+CompositeDataFrame(columns::Vector{Any}, cnames::Vector{Symbol})
+CompositeDataFrame(columns::Vector{Any}, cnames::Vector{Symbol}, typename::Symbol)
+CompositeDataFrame(; kwargs...)
+CompositeDataFrame(typename::Symbol; kwargs...)
+```
+
+A constructor of AbstractCompositeDataFrames that mimics the `DataFrame` 
+constructor. 
+
+This uses `eval` to create a new type within the current module. 
+
+### Arguments
+
+* `columns` : contains the contents of the columns
+* `cnames` : the names of the columns
+* `typename` : the optional name of the type created
+* `kwargs` : the key gives the column names, and the value is the column contents
+
+### Returns
+
+A composite type (not immutable) that is an `AbstractCompositeDataFrame`.
+
+### Examples
+
+```julia
+df = CompositeDataFrame(Any[1:3, [2, 1, 2]], [:x, :y])
+df = CompositeDataFrame(x = 1:3, y = [2, 1, 2])
+df = CompositeDataFrame(:MyDF, x = 1:3, y = [2, 1, 2])
+```
+"""
 function CompositeDataFrame(columns::Vector{Any},
-                            cnames::Vector{Symbol} = gennames(length(columns)))
+                            cnames::Vector{Symbol} = gennames(length(columns)),
+                            typename::Symbol = symbol("CompositeDF" * string(gensym())))
     # TODO: length checks
-    typename = symbol("CompositeDF" * string(gensym()))
     e = :(type $(typename) <: AbstractCompositeDataFrame end)
     e.args[3].args = Any[:($(cnames[i]) :: $(typeof(columns[i]))) for i in 1:length(columns)]
-    eval(e)   # create the type
-    typ = eval(typename)
+    eval(current_module(), e)   # create the type
+    typ = eval(current_module(), typename)
     return typ(columns...)
 end
 
 CompositeDataFrame(; kwargs...) =
     CompositeDataFrame(Any[ v for (k, v) in kwargs ],
                        Symbol[ k for (k, v) in kwargs ])
+CompositeDataFrame(typename::Symbol; kwargs...) =
+    CompositeDataFrame(Any[ v for (k, v) in kwargs ],
+                       Symbol[ k for (k, v) in kwargs ],
+                       typename)
 
 # CompositeDataFrame(df::DataFrame) = CompositeDataFrame(df.columns, names(df))
 
