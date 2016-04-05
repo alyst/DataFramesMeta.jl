@@ -257,8 +257,9 @@ All of the other macros are based on `@with`.
 # CompositeDataFrame
 
 A CompositeDataFrame is a type-stable AbstractDataFrame built using Composite
-types. `CompositeDataFrame` is an abstract type; each concrete composite
-type inherits from this. The advantages of this approach are:
+types. Each column is a field in a composite type. `CompositeDataFrame` is an
+abstract type; each concrete composite type inherits from this. The advantages
+of this approach are:
 
 * You can access single columns directly using `df.colA`. This is type stable,
   so code should be faster. (There is still the function boundary to worry 
@@ -299,7 +300,7 @@ first symbol:
   
 ```julia
 n = 10
-d = CompositeDataFrame(:MyDF, a = 1:n, b = rand(10), c = DataArray(rand(1:3, n)))
+d = CompositeDataFrame(:MyDF, a = 1:n, b = rand(n), c = DataArray(rand(1:3, n)))
 ```
 
 You can also define a CompositeDataFrame manually as follows. If you do this,
@@ -316,9 +317,24 @@ MyDF(n::Integer) = MyDF(zeros(Int, n), zeros(n), DataArray(zeros(n)))
 d = MyDF(10)
 ```
 
-Note that a CompositeDataFrame is type stable with object access like `df.colA` 
+Note that a CompositeDataFrame is type stable with field access like `df.colA` 
 but not with getindex indexing like `df[:colA]`. `df[:colA]` works, but it is
 not type stable.
+
+Type-stable access to rows is also provided using `row(d, i)` or the iterator
+`eachrow(d)`. Here is an example:
+
+```julia
+n = 10
+d = CompositeDataFrame(:MyDF, a = 1:n, b = rand(10), c = DataArray(rand(1:3, n)))
+x = row(d, 5)
+x.a    # 5
+y = [x.a * x.b for x in eachrow(d)]
+```
+
+In the example above, the call to `CompositeDataFrame` creates the type `MyDF`
+that holds the composite data frame and another type `MyDFRow` that is used by
+`row` and `eachrow`. 
 
 # Package Maintenance
 
